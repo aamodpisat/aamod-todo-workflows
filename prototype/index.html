@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aamod Personal Todo</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #141414;
+      --muted: #5f5f5f;
+      --faint: #8a8a8a;
+      --line: #ececec;
+      --line-strong: #e3e3e3;
+      --soft: #f6f6f6;
+      --critical: #c4372f;
+      --critical-bg: #fdf3f2;
+      --stuck: #8a5a12;
+      --stuck-bg: #fbf6ee;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #fff; color: var(--ink); }
+    #app { min-height: 100vh; }
+    body { font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 2px solid var(--ink); outline-offset: 2px;
+    }
+    h1, h2, p { margin: 0; }
+    .login { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 0.9fr; }
+    .login-story, .login-panel { padding: 56px 64px; display: flex; flex-direction: column; justify-content: center; }
+    .login-panel { border-left: 1px solid var(--line); }
+    .brand { font-weight: 600; letter-spacing: -0.03em; font-size: 15px; }
+    .brand small { display: block; font-weight: 400; color: var(--faint); letter-spacing: 0; font-size: 12px; margin-top: 2px; }
+    .login-story h1 { font-size: 56px; font-weight: 600; letter-spacing: -0.045em; line-height: 1.02; max-width: 10ch; margin: 28px 0 16px; }
+    .login-story p { max-width: 36ch; color: var(--muted); font-size: 16px; }
+    .login-card { width: min(380px, 100%); }
+    .login-card h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .hint, .fine, .muted { color: var(--muted); }
+    .fine { margin-top: 16px; font-size: 12px; color: var(--faint); }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+    input[type="text"], input[type="email"], input[type="date"], input[type="url"], textarea, select {
+      width: 100%; background: #fff; border: 1px solid var(--line-strong); border-radius: 10px; padding: 11px 12px; margin-bottom: 12px;
+    }
+    textarea { min-height: 84px; resize: vertical; }
+    .btn { border: 0; border-radius: 999px; padding: 10px 16px; background: var(--ink); color: #fff; }
+    .btn.full { width: 100%; }
+    .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
+    .btn.small { padding: 7px 12px; font-size: 13px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 220px 1fr; }
+    .rail { border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; background: #fff; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav button, .tag-btn { text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 8px 10px; color: var(--muted); }
+    .nav button.active, .tag-btn.on { background: var(--soft); color: var(--ink); }
+    .rail h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 500; }
+    .rail-foot { margin-top: auto; color: var(--faint); font-size: 12px; }
+    .stage { min-width: 0; min-height: 100vh; display: flex; flex-direction: column; background: #fff; }
+    .top { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--line); }
+    .top h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
+    .top .sub { color: var(--faint); margin-right: auto; font-size: 13px; }
+    .board { display: flex; gap: 12px; padding: 18px 20px 32px; overflow-x: auto; align-items: flex-start; flex: 1; background: #fff; }
+    .column { width: 280px; flex: 0 0 280px; background: var(--soft); border-radius: 16px; padding: 8px; min-height: 180px; }
+    .column.over { outline: 1px solid var(--ink); }
+    .col-head { display: flex; justify-content: space-between; padding: 8px 8px 10px; font-size: 13px; }
+    .col-head em { font-style: normal; color: var(--faint); font-size: 12px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: grab; }
+    .card.critical { border-color: #f0c9c6; background: var(--critical-bg); }
+    .card.dragging { opacity: 0.45; }
+    .card h2 { font-size: 14px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { font-size: 11px; padding: 3px 7px; border-radius: 999px; background: var(--soft); color: var(--muted); }
+    .chip.hot { background: #fff; color: var(--critical); }
+    .chip.still { background: var(--stuck-bg); color: var(--stuck); }
+    .card-meta { margin-top: 10px; color: var(--faint); font-size: 12px; display: flex; justify-content: space-between; }
+    .empty-col { color: var(--faint); font-size: 12px; padding: 8px; }
+    .page { padding: 22px 28px 48px; overflow: auto; }
+    .hero { border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; display: flex; justify-content: space-between; gap: 18px; align-items: flex-end; }
+    .kicker { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+    .hero h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; margin: 6px 0; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat { border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+    .stat b { display: block; font-size: 32px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .stat.hot b { color: var(--critical); }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .panel { border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; background: #fff; }
+    .panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .panel .caption { color: var(--faint); font-size: 12px; margin-bottom: 14px; }
+    .donut-wrap { display: flex; gap: 18px; align-items: center; }
+    .legend { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+    .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-right: 8px; }
+    .bar-row { display: grid; grid-template-columns: 92px 1fr 28px; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+    .bar { height: 8px; background: var(--soft); border-radius: 99px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--ink); border-radius: 99px; }
+    .bar i.warn { background: var(--critical); }
+    .list-item { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+    .list-item button { background: none; border: 0; padding: 0; text-align: left; }
+    .span-2 { grid-column: 1 / -1; }
+    .overlay { position: fixed; inset: 0; background: rgba(20, 20, 20, 0.28); display: flex; justify-content: flex-end; z-index: 5; }
+    .drawer, .modal { background: #fff; height: 100%; width: min(440px, 100%); overflow: auto; padding: 22px 22px 40px; }
+    .modal-wrap { margin: auto; width: min(480px, calc(100% - 32px)); }
+    .modal { height: auto; width: 100%; max-height: calc(100vh - 48px); border-radius: 18px; border: 1px solid var(--line); }
+    .drawer-top, .modal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .drawer h2, .modal h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.1; margin: 4px 0 16px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .person, .link-row, .comment { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+    .comment small, .link-row small { color: var(--faint); }
+    .inline { display: flex; gap: 8px; align-items: center; }
+    .inline input { margin: 0; }
+    .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 999px; font-size: 13px; z-index: 8; }
+    .wf-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .wf-row input { margin-bottom: 8px; }
+    .wf-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .check input { width: auto; margin: 0; }
+    .error { color: var(--critical); font-size: 13px; min-height: 1.2em; }
+    .admin-page { max-width: 720px; }
+    .mail-stack { max-width: 680px; display: flex; flex-direction: column; gap: 18px; }
+    .letter { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+    .letter-top { padding: 22px 22px 8px; }
+    .letter h2 { font-size: 32px; font-weight: 600; letter-spacing: -0.045em; line-height: 1.05; margin: 8px 0 10px; }
+    .focus { margin: 16px 22px; padding: 16px; border-radius: 14px; background: var(--ink); color: #fff; }
+    .focus .kicker, .focus .meta { color: rgba(255,255,255,0.62); }
+    .focus h3 { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; margin: 6px 0; }
+    .letter-body { padding: 0 22px 22px; }
+    .days { font-size: 42px; font-weight: 600; letter-spacing: -0.05em; line-height: 1; }
+    .tpl { margin-top: 18px; }
+    .tpl h2 { margin-bottom: 4px; }
+    @media (max-width: 960px) {
+      .login, .shell, .charts, .stats, .field-row { grid-template-columns: 1fr; }
+      .login-story, .login-panel { padding: 32px 24px; }
+      .login-story h1 { font-size: 40px; }
+      .rail { display: none; }
+      .span-2 { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"><p style="padding:28px">Loading Aamod Personal Todo…</p></div>
+  <script>
+    const STORAGE = "aamod-todo-prototype-v2";
+
+    function isoOffset(days) {
+      const d = new Date();
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + days);
+      return d.toISOString().slice(0, 10);
+    }
+    function todayIso() { return isoOffset(0); }
+    function daysFromToday(iso) {
+      if (!iso) return null;
+      const a = new Date(todayIso() + "T12:00:00");
+      const b = new Date(iso + "T12:00:00");
+      return Math.round((b - a) / 86400000);
+    }
+    function uid() { return Math.random().toString(36).slice(2, 9); }
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+    function fill(template, vars) {
+      return String(template || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => (
+        vars[key] == null ? "" : String(vars[key])
+      ));
+    }
+    function defaultEmails() {
+      return {
+        daily: {
+          subject: "Aamod, {{urgent}} tasks need you before the day gets away",
+          headline: "Start with this one.",
+          intro: "Everything else can wait. If you only touch one task this morning, make it the one below.",
+          signoff: "Move it forward, even by a single step."
+        },
+        reminder: {
+          subject: "Still in {{workflow}}: {{task}}",
+          headline: "This has been waiting {{days}} days.",
+          intro: "It has not changed workflow. Finish the next step, or move it on purpose.",
+          signoff: "A task left sitting is a decision. Make that decision today."
+        }
+      };
+    }
+
+    function seed() {
+      return {
+        authed: false,
+        view: "board",
+        filter: [],
+        openId: null,
+        composer: false,
+        toast: "",
+        adminError: "",
+        emails: defaultEmails(),
+        workflows: [
+          { id: "todo", name: "Todo", alert: true },
+          { id: "progress", name: "In Progress", alert: true },
+          { id: "review", name: "In Review", alert: true },
+          { id: "hold", name: "On Hold", alert: true },
+          { id: "done", name: "Done", alert: false },
+          { id: "archived", name: "Archived", alert: false }
+        ],
+        tasks: [
+          { id: "t1", title: "Rewrite the onboarding empty state", description: "The first-run board should explain workflows without a tutorial modal.", workflowId: "progress", entered: isoOffset(-9), deadline: isoOffset(1), tags: ["design", "copy"], links: [{ label: "Current empty state", url: "https://example.com/empty" }], people: ["priya@example.com"], comments: [{ at: isoOffset(-2), text: "First pass is in the prototype. Need a shorter headline." }] },
+          { id: "t2", title: "Daily digest email layout", description: "The morning letter should make the first task obvious.", workflowId: "review", entered: isoOffset(-2), deadline: isoOffset(6), tags: ["email"], links: [], people: [], comments: [] },
+          { id: "t3", title: "Tag filter on the board", description: "Selecting a tag hides tasks that do not carry it.", workflowId: "todo", entered: isoOffset(-1), deadline: "", tags: ["board"], links: [], people: [], comments: [] },
+          { id: "t4", title: "Decide which workflows alert after 7 days", description: "Done and Archived stay quiet. The others send one reminder per stay.", workflowId: "hold", entered: isoOffset(-12), deadline: "", tags: ["ops"], links: [], people: ["ops@example.com"], comments: [] },
+          { id: "t5", title: "Dashboard counts", description: "Open, critical, stuck, and a chart for each workflow.", workflowId: "done", entered: isoOffset(-3), deadline: isoOffset(-4), tags: ["metrics"], links: [], people: [], comments: [] },
+          { id: "t6", title: "iPhone reminder for stale tasks", description: "Email reaches the phone through Mail. Web push only after Add to Home Screen.", workflowId: "todo", entered: isoOffset(-8), deadline: isoOffset(-1), tags: ["notifications"], links: [{ label: "Web Push on iOS", url: "https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/" }], people: [], comments: [] },
+          { id: "t7", title: "Mention someone by email on a comment", description: "Posting a comment notifies the people tagged on the task.", workflowId: "progress", entered: isoOffset(-4), deadline: isoOffset(1), tags: ["email", "comments"], links: [], people: ["lee@example.com"], comments: [] },
+          { id: "t8", title: "Archive last quarter's specs", description: "Move finished reference tasks to Archived. Do not delete them.", workflowId: "archived", entered: isoOffset(-1), deadline: "", tags: ["ops"], links: [], people: [], comments: [] }
+        ]
+      };
+    }
+
+    let state = load();
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE);
+        if (!raw) return seed();
+        const parsed = JSON.parse(raw);
+        if (!parsed.workflows || !parsed.tasks) return seed();
+        parsed.emails = Object.assign(defaultEmails(), parsed.emails || {});
+        parsed.emails.daily = Object.assign(defaultEmails().daily, parsed.emails.daily || {});
+        parsed.emails.reminder = Object.assign(defaultEmails().reminder, parsed.emails.reminder || {});
+        return parsed;
+      } catch (e) { return seed(); }
+    }
+    function save() { localStorage.setItem(STORAGE, JSON.stringify(state)); }
+    function workflow(id) { return state.workflows.find((w) => w.id === id); }
+    function task(id) { return state.tasks.find((t) => t.id === id); }
+    function inbox() {
+      return state.workflows.find((w) => w.name.trim().toLowerCase() === "todo") || state.workflows[0];
+    }
+    function terminal(workflowId) {
+      const name = (workflow(workflowId) || {}).name || "";
+      return name === "Done" || name === "Archived";
+    }
+    function ageDays(t) { return -(daysFromToday(t.entered) || 0); }
+    function deadlineState(t) {
+      if (!t.deadline || terminal(t.workflowId)) return null;
+      const d = daysFromToday(t.deadline);
+      if (d < 0) return { kind: "overdue", label: "Overdue " + Math.abs(d) + "d" };
+      if (d <= 2) return { kind: "soon", label: d === 0 ? "Due today" : "Due in " + d + "d" };
+      return { kind: "ok", label: "Due " + t.deadline };
+    }
+    function isStuck(t) {
+      const w = workflow(t.workflowId);
+      return Boolean(w && w.alert) && ageDays(t) >= 7;
+    }
+    function visibleTasks() {
+      return state.tasks.filter((t) => {
+        if (!state.filter.length) return true;
+        return state.filter.every((tag) => (t.tags || []).includes(tag));
+      });
+    }
+    function allTags() {
+      return [...new Set(state.tasks.flatMap((t) => t.tags || []))].sort();
+    }
+    function openTasks() { return state.tasks.filter((t) => !terminal(t.workflowId)); }
+    function counts() {
+      const open = openTasks();
+      return {
+        open: open.length,
+        critical: open.filter((t) => { const d = deadlineState(t); return d && d.kind !== "ok"; }).length,
+        stuck: state.tasks.filter(isStuck).length,
+        done: state.tasks.filter((t) => terminal(t.workflowId)).length
+      };
+    }
+    function priorityTask() {
+      return openTasks().slice().sort((a, b) => score(b) - score(a))[0] || null;
+    }
+    function score(t) {
+      const d = deadlineState(t);
+      let n = ageDays(t);
+      if (d && d.kind === "overdue") n += 100;
+      else if (d && d.kind === "soon") n += 40;
+      if (isStuck(t)) n += 30;
+      return n;
+    }
+    function longestStuck() {
+      return state.tasks.filter(isStuck).slice().sort((a, b) => ageDays(b) - ageDays(a))[0] || null;
+    }
+
+    function showToast(text) {
+      state.toast = text;
+      render();
+      setTimeout(() => { state.toast = ""; render(); }, 2400);
+    }
+    function moveTask(id, workflowId) {
+      const t = task(id);
+      if (!t || t.workflowId === workflowId) return;
+      t.workflowId = workflowId;
+      t.entered = todayIso();
+      save();
+    }
+
+    function render() {
+      const root = document.getElementById("app");
+      root.innerHTML = state.authed ? shell() : login();
+      bind();
+    }
+
+    function login() {
+      return `
+        <section class="login">
+          <div class="login-story">
+            <div class="brand">Aamod<small>Personal Todo</small></div>
+            <h1>One board. Every morning.</h1>
+            <p>Tasks start in Todo. You move them. The morning mail tells you which one to touch first.</p>
+          </div>
+          <div class="login-panel">
+            <form class="login-card" id="login-form">
+              <h2>Sign in</h2>
+              <p class="hint">One operator. The production system id will live in Vercel, not in this file.</p>
+              <label for="sid">System id</label>
+              <input id="sid" name="sid" type="text" autocomplete="off" placeholder="At least 8 characters" />
+              <button class="btn full" type="submit">Enter the board</button>
+              <p class="fine" id="login-error"></p>
+            </form>
+          </div>
+        </section>`;
+    }
+
+    function shell() {
+      const titles = { board: "Board", dashboard: "Dashboard", admin: "Workflows", mail: "Updates" };
+      const sub = state.view === "board"
+        ? (state.filter.length ? "Filtered by " + state.filter.join(", ") : "All tasks")
+        : "";
+      return `
+        <div class="shell">
+          <aside class="rail">
+            <div class="brand">Aamod<small>Personal Todo</small></div>
+            <nav class="nav">
+              ${navBtn("board", "Board")}${navBtn("dashboard", "Dashboard")}${navBtn("mail", "Updates")}${navBtn("admin", "Workflows")}
+            </nav>
+            <div>
+              <h3>Tags</h3>
+              <div class="nav">${allTags().map((tag) => `<button class="tag-btn ${state.filter.includes(tag) ? "on" : ""}" data-tag="${esc(tag)}">${esc(tag)}</button>`).join("")}</div>
+            </div>
+            <div class="rail-foot">Tasks cannot be deleted. Move them to Archived.</div>
+          </aside>
+          <main class="stage">
+            <header class="top">
+              <h1>${titles[state.view]}</h1>
+              <div class="sub">${esc(sub)}</div>
+              <button class="btn small" id="new-task" type="button">New task</button>
+              <button class="btn ghost small" id="sign-out" type="button">Sign out</button>
+            </header>
+            ${state.view === "board" ? board() : ""}
+            ${state.view === "dashboard" ? dashboard() : ""}
+            ${state.view === "admin" ? admin() : ""}
+            ${state.view === "mail" ? mail() : ""}
+          </main>
+        </div>
+        ${state.openId ? drawer() : ""}
+        ${state.composer ? composer() : ""}
+        ${state.toast ? `<div class="toast">${esc(state.toast)}</div>` : ""}`;
+    }
+    function navBtn(view, label) {
+      return `<button type="button" class="${state.view === view ? "active" : ""}" data-view="${view}">${label}</button>`;
+    }
+
+    function board() {
+      const tasks = visibleTasks();
+      return `<div class="board">${state.workflows.map((w) => {
+        const cards = tasks.filter((t) => t.workflowId === w.id);
+        return `<section class="column" data-drop="${w.id}">
+          <div class="col-head"><strong>${esc(w.name)}</strong><em>${cards.length}${w.alert ? " · alerts" : ""}</em></div>
+          ${cards.map(card).join("") || `<div class="empty-col">Drop a task here</div>`}
+        </section>`;
+      }).join("")}</div>`;
+    }
+    function card(t) {
+      const flag = deadlineState(t);
+      const hot = flag && flag.kind !== "ok";
+      return `<article class="card ${hot ? "critical" : ""}" draggable="true" data-id="${t.id}">
+        <h2>${esc(t.title)}</h2>
+        <div class="chips">
+          ${(t.tags || []).map((tag) => `<span class="chip">${esc(tag)}</span>`).join("")}
+          ${hot ? `<span class="chip hot">${esc(flag.label)}</span>` : ""}
+          ${isStuck(t) ? `<span class="chip still">Still ${ageDays(t)}d</span>` : ""}
+        </div>
+        <div class="card-meta"><span>${ageDays(t)}d here</span><span>${t.people && t.people[0] && !hot ? esc(t.people[0]) : (t.deadline && !hot ? esc(t.deadline) : "")}</span></div>
+      </article>`;
+    }
+
+    const INK = ["#141414", "#3f3f3f", "#6e6e6e", "#9a9a9a", "#c6c6c6", "#e4e4e4"];
+    function donut(parts) {
+      const total = parts.reduce((sum, part) => sum + part.value, 0) || 1;
+      const r = 42, c = 2 * Math.PI * r;
+      let offset = 0;
+      const rings = parts.map((part, i) => {
+        const len = part.value / total * c;
+        const circle = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${INK[i % INK.length]}" stroke-width="14" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-offset}" />`;
+        offset += len;
+        return circle;
+      }).join("");
+      return `<div class="donut-wrap">
+        <svg viewBox="0 0 120 120" width="148" height="148" aria-label="Tasks by workflow">
+          <g transform="rotate(-90 60 60)">${rings}</g>
+          <text x="60" y="56" text-anchor="middle" font-size="22" font-family="inherit" fill="#141414">${total}</text>
+          <text x="60" y="74" text-anchor="middle" font-size="10" fill="#8a8a8a">tasks</text>
+        </svg>
+        <div class="legend">${parts.map((part, i) => `<div><i style="background:${INK[i % INK.length]}"></i>${esc(part.label)} · ${part.value}</div>`).join("")}</div>
+      </div>`;
+    }
+    function bars(rows, warn) {
+      const max = Math.max(1, ...rows.map((row) => row.value));
+      return rows.map((row) => `<div class="bar-row"><span>${esc(row.label)}</span><div class="bar"><i class="${warn && row.warn ? "warn" : ""}" style="width:${Math.round(row.value / max * 100)}%"></i></div><span>${row.value}</span></div>`).join("");
+    }
+
+    function dashboard() {
+      const c = counts();
+      const first = priorityTask();
+      const flag = first ? deadlineState(first) : null;
+      const byWorkflow = state.workflows.map((w) => ({ label: w.name, value: state.tasks.filter((t) => t.workflowId === w.id).length }));
+      const ages = [
+        { label: "0–2 days", value: openTasks().filter((t) => ageDays(t) <= 2).length },
+        { label: "3–6 days", value: openTasks().filter((t) => ageDays(t) >= 3 && ageDays(t) <= 6).length },
+        { label: "7 days+", value: openTasks().filter((t) => ageDays(t) >= 7).length, warn: true }
+      ];
+      const deadlines = [
+        { label: "Overdue", value: openTasks().filter((t) => { const d = deadlineState(t); return d && d.kind === "overdue"; }).length, warn: true },
+        { label: "Due in 48h", value: openTasks().filter((t) => { const d = deadlineState(t); return d && d.kind === "soon"; }).length, warn: true },
+        { label: "Later", value: openTasks().filter((t) => { const d = deadlineState(t); return d && d.kind === "ok"; }).length },
+        { label: "No deadline", value: openTasks().filter((t) => !t.deadline).length }
+      ];
+      return `<div class="page">
+        ${first ? `<section class="hero">
+          <div>
+            <div class="kicker">Do this first</div>
+            <h2>${esc(first.title)}</h2>
+            <p class="muted">${esc((workflow(first.workflowId) || {}).name || "")} · ${ageDays(first)} days here${flag ? " · " + flag.label : ""}</p>
+          </div>
+          <button class="btn small" type="button" data-open="${first.id}">Open task</button>
+        </section>` : ""}
+        <div class="stats">
+          <div class="stat"><b>${c.open}</b><span>Open tasks</span></div>
+          <div class="stat hot"><b>${c.critical}</b><span>Overdue or due within 48 hours</span></div>
+          <div class="stat"><b>${c.stuck}</b><span>Still 7 days or more</span></div>
+          <div class="stat"><b>${c.done}</b><span>Done or archived</span></div>
+        </div>
+        <div class="charts">
+          <section class="panel">
+            <h2>Tasks by workflow</h2>
+            <p class="caption">How the current board is split. Sample data in this browser.</p>
+            ${donut(byWorkflow)}
+          </section>
+          <section class="panel">
+            <h2>How long open tasks have sat</h2>
+            <p class="caption">Days in the current workflow. 7 days or more is the reminder line.</p>
+            ${bars(ages, true)}
+          </section>
+          <section class="panel span-2">
+            <h2>Deadlines on open tasks</h2>
+            <p class="caption">Overdue and due within 48 hours carry the red mark on the board.</p>
+            ${bars(deadlines, true)}
+          </section>
+        </div>
+      </div>`;
+    }
+
+    function admin() {
+      const mailField = (kind, field, label, multiline) => {
+        const value = state.emails[kind][field];
+        const control = multiline
+          ? `<textarea data-mail="${kind}.${field}">${esc(value)}</textarea>`
+          : `<input data-mail="${kind}.${field}" type="text" value="${esc(value)}" />`;
+        return `<label>${label}</label>${control}`;
+      };
+      return `<div class="page admin-page">
+        <section class="panel">
+          <h2>Workflows</h2>
+          <p class="caption">Only you can change these. A workflow with tasks cannot be removed. Tasks cannot be deleted.</p>
+          ${state.workflows.map((w, i) => `<div class="wf-row">
+            <input data-rename="${w.id}" value="${esc(w.name)}" />
+            <div class="wf-actions">
+              <label class="check"><input type="checkbox" data-alert="${w.id}" ${w.alert ? "checked" : ""} /> 7-day alert</label>
+              <button class="btn ghost small" type="button" data-up="${i}" ${i === 0 ? "disabled" : ""}>Up</button>
+              <button class="btn ghost small" type="button" data-remove="${w.id}">Remove</button>
+            </div>
+          </div>`).join("")}
+          <p class="error">${esc(state.adminError)}</p>
+          <form id="add-wf" class="inline">
+            <input name="name" type="text" placeholder="New workflow name" />
+            <button class="btn small" type="submit">Add</button>
+          </form>
+        </section>
+        <section class="panel tpl">
+          <h2>Morning email</h2>
+          <p class="caption">Sent every day at 08:00 Asia/Kolkata. Placeholders: {{name}} {{urgent}} {{open}} {{stuck}}. The task list is filled from the board. Open Updates to see the letter.</p>
+          ${mailField("daily", "subject", "Subject")}
+          ${mailField("daily", "headline", "Headline")}
+          ${mailField("daily", "intro", "Opening", true)}
+          ${mailField("daily", "signoff", "Closing line")}
+        </section>
+        <section class="panel tpl">
+          <h2>Stuck reminder</h2>
+          <p class="caption">Sent when a task stays 7 days in a workflow whose alert is on. Placeholders: {{name}} {{task}} {{workflow}} {{days}}.</p>
+          ${mailField("reminder", "subject", "Subject")}
+          ${mailField("reminder", "headline", "Headline")}
+          ${mailField("reminder", "intro", "Opening", true)}
+          ${mailField("reminder", "signoff", "Closing line")}
+          <p style="margin-top:8px"><button class="btn ghost small" id="reset" type="button">Reset sample board</button></p>
+        </section>
+      </div>`;
+    }
+
+    function mail() {
+      const c = counts();
+      const daily = state.emails.daily;
+      const vars = { name: "Aamod", urgent: c.critical, open: c.open, stuck: c.stuck };
+      const first = priorityTask();
+      const rest = openTasks().filter((t) => !first || t.id !== first.id).slice(0, 4);
+      const stuck = longestStuck();
+      const reminder = state.emails.reminder;
+      const rvars = stuck ? {
+        name: "Aamod",
+        task: stuck.title,
+        workflow: (workflow(stuck.workflowId) || {}).name || "",
+        days: ageDays(stuck)
+      } : { name: "Aamod", task: "a task", workflow: "a workflow", days: 7 };
+      return `<div class="page mail-stack">
+        <article class="letter">
+          <div class="letter-top">
+            <div class="kicker">Morning email · 08:00</div>
+            <p class="muted" style="margin-top:8px">${esc(fill(daily.subject, vars))}</p>
+            <h2>${esc(fill(daily.headline, vars))}</h2>
+            <p>${esc(fill(daily.intro, vars))}</p>
+          </div>
+          ${first ? `<div class="focus">
+            <div class="kicker">Do this first</div>
+            <h3>${esc(first.title)}</h3>
+            <p class="meta">${esc((workflow(first.workflowId) || {}).name || "")} · ${ageDays(first)} days here${deadlineState(first) ? " · " + esc(deadlineState(first).label) : ""}</p>
+          </div>` : ""}
+          <div class="letter-body">
+            ${rest.map((t) => `<div class="list-item"><span>${esc(t.title)}</span><span class="muted">${esc((workflow(t.workflowId) || {}).name || "")}</span></div>`).join("")}
+            <p style="margin-top:16px">${esc(fill(daily.signoff, vars))}</p>
+            <p class="fine">${c.open} open · ${c.critical} near a deadline · ${c.stuck} still for 7 days</p>
+          </div>
+        </article>
+        <article class="letter">
+          <div class="letter-top">
+            <div class="kicker">Reminder · a workflow has not moved</div>
+            <p class="muted" style="margin-top:8px">${esc(fill(reminder.subject, rvars))}</p>
+            <h2>${esc(fill(reminder.headline, rvars))}</h2>
+            <p>${esc(fill(reminder.intro, rvars))}</p>
+          </div>
+          ${stuck ? `<div class="focus">
+            <div class="days">${ageDays(stuck)}</div>
+            <p class="meta">days in ${esc((workflow(stuck.workflowId) || {}).name || "")}</p>
+            <h3>${esc(stuck.title)}</h3>
+          </div>` : `<div class="letter-body"><p class="muted">Nothing has sat for 7 days. This letter stays quiet until one does.</p></div>`}
+          <div class="letter-body"><p>${esc(fill(reminder.signoff, rvars))}</p></div>
+        </article>
+        <p class="fine">These words are edited under Workflows. Mail on your iPhone is how the reminder reaches the phone. A Vercel site cannot send a native iPhone push by itself.</p>
+      </div>`;
+    }
+
+    function drawer() {
+      const t = task(state.openId);
+      if (!t) return "";
+      const flag = deadlineState(t);
+      const w = workflow(t.workflowId);
+      return `<div class="overlay" id="overlay"><aside class="drawer">
+        <div class="drawer-top">
+          <div class="kicker">${esc(w ? w.name : "")} · ${ageDays(t)} days here</div>
+          <button class="btn ghost small" type="button" id="close">Close</button>
+        </div>
+        <h2>${esc(t.title)}</h2>
+        ${flag && flag.kind !== "ok" ? `<p class="chip hot" style="display:inline-block;margin-bottom:12px">${esc(flag.label)}</p>` : ""}
+        <label>Move workflow</label>
+        <select id="move">${state.workflows.map((item) => `<option value="${item.id}" ${item.id === t.workflowId ? "selected" : ""}>${esc(item.name)}</option>`).join("")}</select>
+        <label>Description</label>
+        <textarea id="desc">${esc(t.description)}</textarea>
+        <div class="field-row">
+          <div><label>Deadline, optional</label><input id="deadline" type="date" value="${esc(t.deadline)}" /></div>
+          <div><label>Tags</label><input id="tags" type="text" value="${esc((t.tags || []).join(", "))}" /></div>
+        </div>
+        <label>Links</label>
+        ${(t.links || []).map((l) => `<div class="link-row"><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a><br><small>${esc(l.url)}</small></div>`).join("") || `<p class="muted">No links yet.</p>`}
+        <form id="add-link" class="inline"><input name="label" type="text" placeholder="Label" /><input name="url" type="url" placeholder="https://" /><button class="btn small" type="submit">Add</button></form>
+        <label style="margin-top:14px">Notify by email</label>
+        ${(t.people || []).map((p) => `<div class="person">${esc(p)}</div>`).join("") || `<p class="muted">No one tagged.</p>`}
+        <form id="add-person" class="inline"><input name="email" type="email" placeholder="name@example.com" /><button class="btn small" type="submit">Tag</button></form>
+        <label style="margin-top:14px">Comments</label>
+        ${(t.comments || []).map((c) => `<div class="comment">${esc(c.text)}<br><small>${esc(c.at)}</small></div>`).join("") || `<p class="muted">No comments yet.</p>`}
+        <form id="add-comment"><textarea name="text" placeholder="Write an update"></textarea><button class="btn small" type="submit">Add comment</button></form>
+      </aside></div>`;
+    }
+
+    function composer() {
+      const start = inbox();
+      return `<div class="overlay" id="overlay"><div class="modal-wrap"><form class="modal" id="create-form">
+        <div class="modal-top"><div class="kicker">New task</div><button class="btn ghost small" type="button" id="close">Close</button></div>
+        <h2>What needs doing?</h2>
+        <p class="hint" style="margin-bottom:14px">It starts in ${esc(start ? start.name : "Todo")}. Move it after it exists.</p>
+        <label>Title</label><input name="title" type="text" required />
+        <label>Description</label><textarea name="description"></textarea>
+        <label>Deadline, optional</label><input name="deadline" type="date" />
+        <label>Tags, comma separated</label><input name="tags" type="text" placeholder="design, email" />
+        <button class="btn" type="submit">Create task</button>
+      </form></div></div>`;
+    }
+
+    function bind() {
+      const loginForm = document.getElementById("login-form");
+      if (loginForm) {
+        loginForm.onsubmit = (e) => {
+          e.preventDefault();
+          const sid = new FormData(loginForm).get("sid").toString().trim();
+          if (sid.length < 8) {
+            document.getElementById("login-error").textContent = "Use at least 8 characters. This preview code is not the production system id.";
+            return;
+          }
+          state.authed = true;
+          save();
+          render();
+        };
+        return;
+      }
+      document.querySelectorAll("[data-view]").forEach((btn) => {
+        btn.onclick = () => { state.view = btn.dataset.view; state.adminError = ""; save(); render(); };
+      });
+      document.querySelectorAll("[data-tag]").forEach((btn) => {
+        btn.onclick = () => {
+          const tag = btn.dataset.tag;
+          state.filter = state.filter.includes(tag) ? state.filter.filter((t) => t !== tag) : [...state.filter, tag];
+          save(); render();
+        };
+      });
+      document.getElementById("new-task").onclick = () => { state.composer = true; render(); };
+      document.getElementById("sign-out").onclick = () => { state.authed = false; save(); render(); };
+      document.querySelectorAll(".card").forEach((el) => {
+        el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", el.dataset.id); el.classList.add("dragging"); el.dataset.dragged = "1"; };
+        el.ondragend = () => el.classList.remove("dragging");
+        el.onclick = () => {
+          if (el.dataset.dragged === "1") { el.dataset.dragged = ""; return; }
+          state.openId = el.dataset.id; render();
+        };
+      });
+      document.querySelectorAll("[data-drop]").forEach((col) => {
+        col.ondragover = (e) => { e.preventDefault(); col.classList.add("over"); };
+        col.ondragleave = () => col.classList.remove("over");
+        col.ondrop = (e) => { e.preventDefault(); moveTask(e.dataTransfer.getData("text/plain"), col.dataset.drop); render(); };
+      });
+      document.querySelectorAll("[data-open]").forEach((btn) => { btn.onclick = () => { state.openId = btn.dataset.open; render(); }; });
+      document.querySelectorAll("[data-rename]").forEach((input) => {
+        input.onchange = () => { const name = input.value.trim(); if (!name) return; workflow(input.dataset.rename).name = name; save(); render(); };
+      });
+      document.querySelectorAll("[data-alert]").forEach((input) => {
+        input.onchange = () => { workflow(input.dataset.alert).alert = input.checked; save(); };
+      });
+      document.querySelectorAll("[data-up]").forEach((btn) => {
+        btn.onclick = () => {
+          const i = Number(btn.dataset.up);
+          if (i < 1) return;
+          const list = state.workflows;
+          const swap = list[i - 1]; list[i - 1] = list[i]; list[i] = swap;
+          save(); render();
+        };
+      });
+      document.querySelectorAll("[data-remove]").forEach((btn) => {
+        btn.onclick = () => {
+          const id = btn.dataset.remove;
+          if (state.workflows.length === 1) { state.adminError = "Keep at least one workflow."; render(); return; }
+          const n = state.tasks.filter((t) => t.workflowId === id).length;
+          if (n) { state.adminError = "Move the " + n + " task" + (n > 1 ? "s" : "") + " out before removing this workflow."; render(); return; }
+          state.workflows = state.workflows.filter((w) => w.id !== id);
+          state.adminError = "";
+          save(); render();
+        };
+      });
+      const addWf = document.getElementById("add-wf");
+      if (addWf) addWf.onsubmit = (e) => {
+        e.preventDefault();
+        const name = new FormData(addWf).get("name").toString().trim();
+        if (!name) return;
+        state.workflows.push({ id: uid(), name, alert: true });
+        state.adminError = "";
+        save(); render();
+      };
+      document.querySelectorAll("[data-mail]").forEach((el) => {
+        el.oninput = () => {
+          const parts = el.dataset.mail.split(".");
+          state.emails[parts[0]][parts[1]] = el.value;
+          save();
+        };
+      });
+      const reset = document.getElementById("reset");
+      if (reset) reset.onclick = () => { state = seed(); state.authed = true; state.view = "admin"; save(); render(); };
+      const close = document.getElementById("close");
+      const overlay = document.getElementById("overlay");
+      if (close) close.onclick = () => { state.openId = null; state.composer = false; render(); };
+      if (overlay) overlay.onclick = (e) => { if (e.target === overlay) { state.openId = null; state.composer = false; render(); } };
+      const move = document.getElementById("move");
+      if (move) move.onchange = () => { moveTask(state.openId, move.value); render(); };
+      const desc = document.getElementById("desc");
+      if (desc) desc.onchange = () => { task(state.openId).description = desc.value; save(); };
+      const deadline = document.getElementById("deadline");
+      if (deadline) deadline.onchange = () => { task(state.openId).deadline = deadline.value; save(); render(); };
+      const tags = document.getElementById("tags");
+      if (tags) tags.onchange = () => {
+        task(state.openId).tags = tags.value.split(",").map((s) => s.trim()).filter(Boolean);
+        save(); render();
+      };
+      const addLink = document.getElementById("add-link");
+      if (addLink) addLink.onsubmit = (e) => {
+        e.preventDefault();
+        const data = new FormData(addLink);
+        const url = data.get("url").toString().trim();
+        const label = data.get("label").toString().trim() || url;
+        if (!/^https?:\/\//i.test(url)) { showToast("Links need to start with http:// or https://"); return; }
+        task(state.openId).links.push({ label, url });
+        save(); render();
+      };
+      const addPerson = document.getElementById("add-person");
+      if (addPerson) addPerson.onsubmit = (e) => {
+        e.preventDefault();
+        const email = new FormData(addPerson).get("email").toString().trim().toLowerCase();
+        if (!email.includes("@")) return;
+        const t = task(state.openId);
+        if (!t.people.includes(email)) t.people.push(email);
+        save();
+        showToast("Would email " + email + " about this task");
+      };
+      const addComment = document.getElementById("add-comment");
+      if (addComment) addComment.onsubmit = (e) => {
+        e.preventDefault();
+        const text = new FormData(addComment).get("text").toString().trim();
+        if (!text) return;
+        const t = task(state.openId);
+        t.comments.push({ at: todayIso(), text });
+        save();
+        showToast(t.people.length ? "Comment saved. Would email " + t.people.join(", ") : "Comment saved");
+      };
+      const create = document.getElementById("create-form");
+      if (create) create.onsubmit = (e) => {
+        e.preventDefault();
+        const data = new FormData(create);
+        const start = inbox();
+        state.tasks.unshift({
+          id: uid(),
+          title: data.get("title").toString().trim(),
+          description: data.get("description").toString().trim(),
+          workflowId: start ? start.id : state.workflows[0].id,
+          entered: todayIso(),
+          deadline: data.get("deadline").toString(),
+          tags: data.get("tags").toString().split(",").map((s) => s.trim()).filter(Boolean),
+          links: [], people: [], comments: []
+        });
+        state.composer = false;
+        state.view = "board";
+        save();
+        showToast("Task created in " + (start ? start.name : "Todo"));
+      };
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && (state.openId || state.composer)) {
+        state.openId = null; state.composer = false; render();
+      }
+    });
+    try { render(); }
+    catch (err) {
+      document.getElementById("app").innerHTML = "<p style=\"padding:28px\">The board could not be drawn. " + esc(err && err.message) + "</p>";
+    }
+  </script>
+</body>
+</html>
